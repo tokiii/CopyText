@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:background="@android:color/white">
+
+    <RelativeLayout
+        android:id="@+id/toolbar_back"
+        android:layout_width="100dp"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:text="返回"
+            android:visibility="visible" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/toolbar_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:text="toolbar title"
+        android:textColor="#333336"
+        android:textSize="18sp" />
+
+
+    <RelativeLayout
+        android:id="@+id/toolbar_right"
+        android:layout_width="100dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:text="清除记录"
+            android:visibility="visible" />
+    </RelativeLayout>
+
+</FrameLayout>

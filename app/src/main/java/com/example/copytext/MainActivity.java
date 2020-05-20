@@ -3,9 +3,10 @@ package com.example.copytext;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -16,19 +17,19 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.blankj.utilcode.util.ActivityUtils;
+import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.SPUtils;
+import com.blankj.utilcode.util.TimeUtils;
+import com.blankj.utilcode.util.ToastUtils;
 import com.lzf.easyfloat.EasyFloat;
 import com.lzf.easyfloat.anim.AppFloatDefaultAnimator;
 import com.lzf.easyfloat.anim.DefaultAnimator;
 import com.lzf.easyfloat.enums.ShowPattern;
 import com.lzf.easyfloat.enums.SidePattern;
-import com.lzf.easyfloat.interfaces.OnDisplayHeight;
 import com.lzf.easyfloat.interfaces.OnFloatCallbacks;
-import com.lzf.easyfloat.interfaces.OnInvokeView;
-import com.lzf.easyfloat.utils.DisplayUtils;
 
 import org.jetbrains.annotations.NotNull;
-
-import java.util.logging.Logger;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     Button btnCopy;
@@ -36,10 +37,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     EditText etCopy;
     Button btnOpenDialog;
     private int times;
-
     TextView tvPopCopy;
-    TextView tvPopTimes ;
-    TextView tvPopAdd ;
+    TextView tvPopTimes;
+    TextView tvPopAdd;
+    RecordBean recordBean;// 实体
+    private boolean isCopy;
+    Button btnRecord;
+    boolean isDialogCreate;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,70 +53,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnClear = findViewById(R.id.btn_clear);
         etCopy = findViewById(R.id.et_copy);
         btnOpenDialog = findViewById(R.id.btn_open_dialog);
-
+        btnRecord = findViewById(R.id.btn_record);
+        btnRecord.setOnClickListener(this);
         btnCopy.setOnClickListener(this);
         btnClear.setOnClickListener(this);
         btnOpenDialog.setOnClickListener(this);
+        etCopy.setText(SPUtils.getInstance().getString("copyStr", ""));
     }
 
-
-    private void openDialog() {
+    private void createDialog() {
         EasyFloat.with(this)
                 // 设置浮窗xml布局文件
                 .setLayout(R.layout.float_app, view -> {
                     // view就是我们传入的浮窗xml布局
-                     tvPopCopy = view.findViewById(R.id.tv_pop_copy);
-                     tvPopTimes = view.findViewById(R.id.tv_pop_times);
-                     tvPopAdd = view.findViewById(R.id.tv_pop_add);
-
-                    tvPopCopy.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            copyStr();
+                    tvPopCopy = view.findViewById(R.id.tv_pop_copy);
+                    tvPopTimes = view.findViewById(R.id.tv_pop_times);
+                    tvPopAdd = view.findViewById(R.id.tv_pop_add);
+                    tvPopCopy.setOnClickListener(v -> copyStr());
+                    TextView tvHidePop = view.findViewById(R.id.tv_hide_pop);
+                    tvHidePop.setOnClickListener(v -> hidePop());
+                    tvPopAdd.setOnClickListener(v -> {
+                        if (!isCopy || TextUtils.isEmpty(etCopy.getText())) {
+                            ToastUtils.showShort("请先复制");
+                            return;
                         }
-                    });
-
-                    tvPopAdd.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            if (AntiShakeUtil.check(view,MainActivity.this)){
-                                return;
-                            }
-                            times++;
-                            tvPopTimes.setText(times + "次");
+                        if (recordBean == null)
+                            recordBean = new RecordBean();
+                        if (AntiShakeUtil.check(view, MainActivity.this)) {
+                            return;
                         }
+                        times++;
+                        tvPopTimes.setText(times + "次");
+                        recordBean.setCopyStr(etCopy.getText().toString());
+                        recordBean.setAddTimes(times);
+                        recordBean.setTime(TimeUtils.getNowString());
+                        recordBean.save();
+
                     });
                 })
-                // 设置浮窗显示类型，默认只在当前Activity显示，可选一直显示、仅前台显示
                 .setShowPattern(ShowPattern.ALL_TIME)
-                // 设置吸附方式，共15种模式，详情参考SidePattern
                 .setSidePattern(SidePattern.RESULT_HORIZONTAL)
-//                // 设置浮窗的标签，用于区分多个浮窗
                 .setTag("copyDialog")
-//                // 设置浮窗是否可拖拽
                 .setDragEnable(true)
-//                // 系统浮窗是否包含EditText，仅针对系统浮窗，默认不包含
                 .hasEditText(false)
-//                // 设置浮窗固定坐标，ps：设置固定坐标，Gravity属性和offset属性将无效
-//                .setLocation(100, 200)
-//                // 设置浮窗的对齐方式和坐标偏移量
-//                .setGravity(Gravity.END | Gravity.CENTER_VERTICAL, 0, 200)
-//                // 设置宽高是否充满父布局，直接在xml设置match_parent属性无效
-//                .setMatchParent(false, false)
-//                // 设置Activity浮窗的出入动画，可自定义，实现相应接口即可（策略模式），无需动画直接设置为null
                 .setAnimator(new DefaultAnimator())
-//                // 设置系统浮窗的出入动画，使用同上
                 .setAppFloatAnimator(new AppFloatDefaultAnimator())
-//                // 设置系统浮窗的不需要显示的页面
-//                .setFilter(MainActivity.class)
-//                // 设置系统浮窗的有效显示高度（不包含虚拟导航栏的高度），基本用不到，除非有虚拟导航栏适配问题
-//                .setDisplayHeight(DisplayUtils.INSTANCE::rejectedNavHeight)
-//                // 浮窗的一些状态回调，如：创建结果、显示、隐藏、销毁、touchEvent、拖拽过程、拖拽结束。
                 .registerCallbacks(new OnFloatCallbacks() {
                     @Override
-                    public void createdResult(boolean isCreated, @Nullable String msg, @Nullable View view) {
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show();
-                        Log.d("copyText", "是否被创建---->" + isCreated + " 信息--->" + msg);
+                    public void createdResult(boolean b, @org.jetbrains.annotations.Nullable String s, @org.jetbrains.annotations.Nullable View view) {
+                        LogUtils.d("弹窗创建---->" + s);
                     }
 
                     @Override
@@ -131,12 +120,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
 
                     @Override
-                    public void touchEvent(@NotNull View view, @NotNull MotionEvent event) {
+                    public void touchEvent(@NotNull View view, @NotNull MotionEvent motionEvent) {
 
                     }
 
                     @Override
-                    public void drag(@NotNull View view, @NotNull MotionEvent event) {
+                    public void drag(@NotNull View view, @NotNull MotionEvent motionEvent) {
 
                     }
 
@@ -144,19 +133,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void dragEnd(@NotNull View view) {
 
                     }
-                })
-//                // 创建浮窗（这是关键哦😂）
-                .show();
+                }).show();
+        isDialogCreate = true;
+    }
 
+    /**
+     * 打开悬浮窗
+     */
+    private void openDialog() {
+        if (!isDialogCreate) {
+            createDialog();
+        } else {
+            EasyFloat.showAppFloat("copyDialog");
+        }
+
+    }
+
+    private void hidePop() {
+        EasyFloat.hideAppFloat("copyDialog");
     }
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.btn_clear:
+                isCopy = false;
+                recordBean = null;// 重置实体
                 etCopy.setText("");
+                SPUtils.getInstance().clear();
                 times = 0;
-                if (tvPopTimes != null){
+                if (tvPopTimes != null) {
                     tvPopTimes.setText("0次");
                 }
                 break;
@@ -166,12 +172,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_open_dialog:
                 openDialog();
                 break;
+            case R.id.btn_record:
+                ActivityUtils.startActivity(new Intent(MainActivity.this, RecordActivity.class));
+                break;
         }
     }
 
-
-    private void copyStr(){
+    private void copyStr() {
+        if (TextUtils.isEmpty(etCopy.getText().toString())) {
+            ToastUtils.showShort("请填写需要复制的内容");
+            return;
+        }
         String str = etCopy.getText().toString();
+        SPUtils.getInstance().put("copyStr", str);
+
         //获取剪贴板管理器：
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 // 创建普通字符型ClipData
@@ -179,5 +193,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 // 将ClipData内容放到系统剪贴板里。
         cm.setPrimaryClip(mClipData);
         Toast.makeText(this, "复制成功", Toast.LENGTH_SHORT).show();
+        isCopy = true;
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        startActivity(intent);
     }
 }
